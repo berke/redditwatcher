@@ -1,0 +1,1 @@
+<scavenge.{byte,native}>: libpcre, libnetstring, libnetclient, use_unix, use_equeue, use_pcre, use_netsys, use_netstring, use_netclient

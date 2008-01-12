@@ -1,19 +1,19 @@
 (* Www *)
 
-open Neturl;;
-open Nethtml;;
-module HC = Http_client;;
-open Util;;
+open Neturl
+open Nethtml
+module HC = Http_client
+open Pffpsf
 
 type request =
 | Get of string
 | Post of string * (string * string) list
 | File of string
-;;
 
-exception Found of string;;
 
-let http_url = Hashtbl.find common_url_syntax "http";;
+exception Found of string
+
+let http_url = Hashtbl.find common_url_syntax "http"
 
 (*** concat_urls *)
 let concat_urls u v =
@@ -22,17 +22,17 @@ let concat_urls u v =
   (apply_relative_url
   (url_of_string http_url u)
   (url_of_string (partial_url_syntax http_url) v))
-;;
+
 (* ***)
 
-let document_of_document_list x = Element("document-list",[],x);;
+let document_of_document_list x = Element("document-list",[],x)
 
 let rec iter_over_data f = function
   | Data(x) -> f x
   | Element(what,attrs,cont) -> List.iter (iter_over_data f) cont
-;;
 
-let rec iter_over_data_list f l = List.iter (iter_over_data f) l;;
+
+let rec iter_over_data_list f l = List.iter (iter_over_data f) l
 
 (*** scan_elements *)
 let rec scan_elements elt specs f = function
@@ -44,15 +44,16 @@ let rec scan_elements elt specs f = function
         f what attrs cont
       else
         List.iter (scan_elements elt specs f) cont
-;;
+
 (* ***)
 
-let scan_elements_list elt specs f l = List.iter (scan_elements elt specs f) l;;
+let scan_elements_list elt specs f l = List.iter (scan_elements elt specs f) l
 
 let select_elements elt = List.filter (function Data(_) -> false | Element(x,y,z) -> x = elt)
 
 (*** dump_document *)
 let dump_document ch doc =
+  let se = String.escaped in
   let o = Format.formatter_of_out_channel ch in
   let g = Format.fprintf in
   let rec h f sep flag = function
@@ -71,7 +72,7 @@ let dump_document ch doc =
       g o "])@]";
   in
   f doc; g o "@?"
-;;
+
 (* ***)
 (*** add_default_headers *)
 let add_default_headers (m : HC.http_call) ?referer ?(cookies=[]) () =
@@ -81,7 +82,7 @@ let add_default_headers (m : HC.http_call) ?referer ?(cookies=[]) () =
   m # set_req_header "Accept-Charset" "ISO-8859-1,utf-8;q=0.7,*;q=0.7";
   (match referer with None -> () | Some(x) -> m # set_req_header "Referer" x);
   List.iter (fun (a,b) -> m # set_req_header "Cookie" (a^"="^b)) cookies
-;;
+
 (* ***)
 (*** obtain_document *)
 let obtain_document (p : HC.pipeline) ?referer ?cookies request = 
@@ -141,13 +142,13 @@ let add_to_pipe_and_parse p t url =
     let body = t # get_resp_body () in
     ignore body
   | x -> failwith (sf "add_to_pipe_and_parse: got code %d" x)
-;;
+
 (* ***)
 (*** parse_cookie *)
 let parse_cookie a =
-  let (b,_) = split_at ';' a in
-  split_at '=' b 
-;;
+  let (b,_) = Util.split_once_at ((=) ';') a in
+  Util.split_once_at ((=) '=') b 
+
 (* ***)
 (*** download *)
 let download url fn =
@@ -185,5 +186,5 @@ let download url fn =
   | `Client_error -> Printf.printf ">>> Client error\n%!"
   | `Http_protocol_error x -> Printf.printf ">>> Protocol error %s\n%!" (Printexc.to_string x)
   | `Unserved -> Printf.printf ">>> Unserved\n%!"
-;;
+
 (* ***)

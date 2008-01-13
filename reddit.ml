@@ -106,7 +106,7 @@ let process_front doc =
       entries := en :: !entries
     )
     doc;
-  List.rev !entries
+  Array.of_list (List.rev !entries)
 
 let process_details doc =
   let de =

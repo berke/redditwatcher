@@ -9,6 +9,7 @@ type entry =
   {
     mutable en_url : string;
     mutable en_title : string;
+    mutable en_user : string;
     mutable en_id : string option;
     mutable en_comments : int option;
     mutable en_score : int option
@@ -24,6 +25,7 @@ type details =
 let print_entry oc en =
   fp oc "URL: %S\n" en.en_url;
   fp oc "Title: %S\n" en.en_title;
+  fp oc "User: %S\n" en.en_user;
   fp oc "Comments: %a\n" (print_option print_int) en.en_comments;
   fp oc "ID: %a\n" (print_option print_string) en.en_id;
   fp oc "Score: %a\n" (print_option print_int) en.en_score
@@ -31,6 +33,7 @@ let print_entry oc en =
 let score_rex = Pcre.regexp "^([0-9]+) "
 let id_from_comments_rex = Pcre.regexp "info/([^/]+)/comments"
 let num_comments_rex = Pcre.regexp "\\S([0-9]+) *comment"
+let user_rex = Pcre.regexp "^/user/"
 
 let process_front doc =
   let entries = ref [] in
@@ -40,6 +43,7 @@ let process_front doc =
       let en =
         {
           en_url = "";
+          en_user = "";
           en_title = "";
           en_id = None;
           en_comments = None;
@@ -75,6 +79,15 @@ let process_front doc =
             )
             e
           )
+        e;
+      on_matching
+        (element "div" &&& has_class "little")
+        (on_matching
+          (element "a" &&&
+            (with_attribute "href"
+              (Pcre.pmatch ~rex:user_rex)
+              false))
+          (visit (on_data (fun u -> en.en_user <- u))))
         e;
       on_matching
         (element "span" &&& has_class "inside")

@@ -23,7 +23,7 @@ module Do =
   end
 
 let spec = [
-  "-scan", Arg.String(fun url -> Do.scan url), "<url> Scan entries offers.";
+  "-scan", Arg.String(fun url -> Do.scan url), "<url> Scan entry.";
   "-dump", Arg.String(fun url -> Do.dump url), "<url> Dump URL content to stdout.";
   "-debug", Arg.Set Opt.debug, " Enable debugging.";
   "-delay", Arg.Set_float Opt.delay, "<delay> Delay between tests in seconds.";
@@ -31,5 +31,5 @@ let spec = [
 
 let _ =
   Arg.parse spec
-    Do.scan
+    Mechanism.perform
     (sf "Usage: %s [options]" (Filename.basename Sys.argv.(0)));

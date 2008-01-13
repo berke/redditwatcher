@@ -4,6 +4,13 @@ open Nethtml
 
 (** Combinators for extracting data from Xml documents *)
 
+let rec has f e =
+  f e ||
+  match e with
+  | Data _ -> false
+  | Element(_, _, xl) ->
+      List.exists (has f) xl
+
 let rec visit f e =
   f e;
   match e with
@@ -44,6 +51,10 @@ let alt f1 g1 f2 g2 e =
         else
           false)
 
+let data_matches f = function
+  | Data u -> f u
+  | _ -> false
+
 let on_data f = function
   | Data u -> f u
   | _ -> ()
@@ -59,3 +70,4 @@ let has_class cl e = List.mem cl (get_classes e)
 
 let ( &&& ) f1 f2 e = f1 e && f2 e
 
+let ( !!! ) f e = not (f e)

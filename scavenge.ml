@@ -18,7 +18,7 @@ module Do =
     let scan url =
       let p = new Www.HC.pipeline in
       let doc = Www.obtain_document p (Www.Get url) in
-      let entries = Reddit.process doc in
+      let entries = Reddit.process_front doc in
       List.iter (Reddit.print_entry stdout) entries
   end
 

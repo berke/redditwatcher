@@ -10,7 +10,6 @@ type request =
 | Post of string * (string * string) list
 | File of string
 
-
 exception Found of string
 
 let http_url = Hashtbl.find common_url_syntax "http"
@@ -76,10 +75,14 @@ let dump_document ch doc =
 (* ***)
 (*** add_default_headers *)
 let add_default_headers (m : HC.http_call) ?referer ?(cookies=[]) () =
-  m # set_req_header "User-Agent" "Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.0.7) Gecko/20060830 Firefox/1.5.0.7 (Debian-1.5.dfsg+1.5.0.7-2)";
-  m # set_req_header "Accept" "image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, image/png, */*";
-  m # set_req_header "Accept-Language" "en";
-  m # set_req_header "Accept-Charset" "ISO-8859-1,utf-8;q=0.7,*;q=0.7";
+  m # set_req_header
+    "User-Agent"
+    "Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.1.8) Gecko/20060601 Firefox/2.0.0.8 (Ubuntu-edgy)";
+  m # set_req_header
+    "Accept"
+    "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5";
+  m # set_req_header "Accept-Language" "en-us,en;q=0.5";
+  m # set_req_header "Accept-Charset" "UTF-8,*";
   (match referer with None -> () | Some(x) -> m # set_req_header "Referer" x);
   List.iter (fun (a,b) -> m # set_req_header "Cookie" (a^"="^b)) cookies
 

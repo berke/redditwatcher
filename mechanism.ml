@@ -22,7 +22,7 @@ module Time =
         wait t
   end
 
-module TM = Map.Make(Time)
+module TM = Xmap.Make(Time)
 
 type event_type =
   | Start
@@ -60,23 +60,41 @@ type 'a context = {
           cx_add      : adder
 }
 
-module TQ = Prioqueue.Make(Time)
+let load_story cx id =
+  let fn = Filename.concat !Opt.story_dir (Util.sanitize_filename ~prefix:"story-" id) in
+  if Sys.file_exists fn then
+    try
+      let st : story = Util.load fn in
+      st
+    with
+    | _ -> raise Not_found
+  else
+    raise Not_found
+
+let save_story cx st =
+  let fn0 = Filename.concat !Opt.story_dir (Util.sanitize_filename ~prefix:"story-" st.st_id) in
+  let fn1 = fn0^".bak" in
+  Util.save fn1 st;
+  if Sys.file_exists fn0 then Unix.unlink fn0;
+  Unix.rename fn1 fn0
+
+(*let save_stories cx dir = Hashtbl.iter cx.cx_stories (fun (_, st) -> save_story cx st)*)
 
 let scheduler initial =
   let t0 = Time.now () in
 
   let delay = ref 0.0 in
 
-  let tasks = TQ.create () in
+  let tasks = ref TM.empty in
   let add t =
-    if not (TQ.is_empty tasks) then
+    if not (TM.is_empty !tasks) then
       begin
-        let t_next = !delay +. TQ.priority (TQ.get tasks 0) in
+        let t0 = TM.min_key !tasks in
+        let t_next = !delay +. t0 in
         if t.tk_schedule -. t_next < !Opt.min_delay then
           t.tk_schedule <- t_next +. !Opt.min_delay;
       end;
-    let _ = TQ.add tasks t t.tk_schedule in
-    ()
+      tasks := TM.add t.tk_schedule t !tasks
   in
 
   (* Add initial task *)
@@ -85,18 +103,22 @@ let scheduler initial =
   let show_tasks () =
     let t = Time.now () in
     pf "Tasks (t=%f):\n" (t -. t0);
-    TQ.iter
-      (fun i _ tk ->
+    let i = ref 0 in
+    TM.iter
+      (fun _ tk ->
         let ts = tk.tk_schedule +. !delay in
-        pf "  #%d: %s @ %f (%f)\n" i tk.tk_name (ts -. t0) (ts -. t)
+        pf "  #%d: %f (%f) : %s\n" !i (ts -. t0) (ts -. t) tk.tk_name;
+        incr i
       )
-      tasks;
+      !tasks;
     pf "%!"
   in
 
-  while not (TQ.is_empty tasks) do
+  while not (TM.is_empty !tasks) do
     show_tasks ();
-    let tk = TQ.data (TQ.take tasks) in
+    let t0 = TM.min_key !tasks in
+    let tk = TM.find t0 !tasks in
+    tasks := TM.remove t0 !tasks;
     let t = Time.now () in
     pf "Delay %f\n" !delay;
     let dt = tk.tk_schedule +. !delay -. t in
@@ -147,9 +169,14 @@ let update_story cx st =
     (fun doc ->
       let t = Time.now () in
       let de = process_details doc in
-      st.st_history <- (t,de) :: st.st_history;
+      if Some de <> st.st_details then
+        begin
+          st.st_history <- (t,de) :: st.st_history;
+          st.st_details <- Some de;
+          save_story cx st
+        end;
       let t = Time.now () in
-      st.st_predicted <- t +. !Opt.min_delay +. 2.0 *. Random.float !Opt.average_delay
+      st.st_predicted <- t +. (*!Opt.min_delay +. 2.0 *. Random.float*) !Opt.delay
     )
 
 let rec details cx st add =
@@ -165,32 +192,45 @@ let process_entry cx delay en =
   match en.en_id with
   | None -> pf "Story with no ID!\n%!"
   | Some id ->
-      if not (Hashtbl.mem cx.cx_stories id) then
-        begin
-          pf "New story %S %S\n%!" id en.en_title;
-          let t = Time.now () in
-          let st =
-            {
-              st_reddit      = cx.cx_url;
-              st_title       = en.en_title;
-              st_url         = en.en_url;
-              st_submitter   = en.en_user;
-              st_id          = id;
-              st_created     = t;
-              st_last_event  = t;
-              st_predicted   = t +. delay +. Random.float !Opt.average_delay;
-              st_details     = None;
-              st_history     = []
-            }
-          in
-          Hashtbl.add cx.cx_stories id st;
-          cx.cx_add
-            {
-              tk_name     = sf "Initial details %S" st.st_title;
-              tk_schedule = st.st_predicted;
-              tk_exec     = details cx st
-            }
-    end
+      let st =
+        if not (Hashtbl.mem cx.cx_stories id) then
+          begin
+            try
+              let st = load_story cx id in
+              Hashtbl.add cx.cx_stories id st;
+              st
+            with
+            | Not_found ->
+              (* See if the story has already been saved *)
+              pf "New story %S %S\n%!" id en.en_title;
+              let t = Time.now () in
+              let st =
+                {
+                  st_reddit      = cx.cx_url;
+                  st_title       = en.en_title;
+                  st_url         = en.en_url;
+                  st_submitter   = en.en_user;
+                  st_id          = id;
+                  st_created     = t;
+                  st_last_event  = t;
+                  st_predicted   = t +. delay (*+. Random.float !Opt.average_delay;*);
+                  st_details     = None;
+                  st_history     = []
+                }
+              in
+              Hashtbl.add cx.cx_stories id st;
+              save_story cx st;
+              st
+          end
+        else
+          Hashtbl.find cx.cx_stories id
+      in
+      cx.cx_add
+      {
+        tk_name     = sf "Initial details %S" st.st_title;
+        tk_schedule = st.st_predicted;
+        tk_exec     = details cx st
+      }
 
 let perform url =
   let scan_delay = 60.0 in

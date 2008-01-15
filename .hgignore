@@ -3,6 +3,7 @@ syntax: glob
 _build/*
 _log
 .svn/*
+stories*
 exa-classes/*
 *.json
 .ledit*

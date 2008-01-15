@@ -1,6 +1,4 @@
-(* Monitor *)
-(* Copyright (C)2005-2006 Berke Durak *)
-(* Released under the GNU General Public License, version 2 or later. *)
+(* Scavenge *)
 
 open Pffpsf
 open Bool
@@ -20,11 +18,28 @@ module Do =
       let doc = Www.obtain_document p (Www.Get url) in
       let entries = Reddit.process_front doc in
       Array.iter (Reddit.print_entry stdout) entries
+
+    open Mechanism
+    open Reddit
+
+    let show fn =
+      let st : story = Util.load fn in
+      let oc = stdout in
+      fp oc "# Reddit: %s\n" st.st_reddit;
+      fp oc "# Title: %S\n" st.st_title;
+      fp oc "# URL: %S\n" st.st_url;
+      fp oc "# Id: %s\n" st.st_id;
+      List.iter
+        (fun (t,de) ->
+          fp oc "%11.0f %d %d %d\n" t de.de_up_votes de.de_down_votes de.de_comments
+        )
+        st.st_history
   end
 
 let spec = [
   "-scan", Arg.String(fun url -> Do.scan url), "<url> Scan entry.";
   "-dump", Arg.String(fun url -> Do.dump url), "<url> Dump URL content to stdout.";
+  "-show", Arg.String(fun fn -> Do.show fn),   "<fn> Show a given story";
   "-debug", Arg.Set Opt.debug, " Enable debugging.";
   "-delay", Arg.Set_float Opt.delay, "<delay> Delay between tests in seconds.";
 ]

@@ -1,4 +1,4 @@
 .PHONY: all
 
 all:
-	ocamlbuild scavenge.native top.cma
+	ocamlbuild scavenge.native scavenge.byte top.cma

@@ -32,7 +32,7 @@ let print_entry oc en =
 
 let score_rex = Pcre.regexp "^([0-9]+) "
 let id_from_comments_rex = Pcre.regexp "info/([^/]+)/comments"
-let num_comments_rex = Pcre.regexp "\\S([0-9]+) *comment"
+let num_comments_rex = Pcre.regexp "\\b([0-9]+) *comment"
 let user_rex = Pcre.regexp "^/user/"
 
 let process_front doc =

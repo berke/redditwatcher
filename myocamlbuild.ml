@@ -5,6 +5,12 @@ open Ocamlbuild_plugin;;
 open Command;;
 open Ocaml_specific;;
 
+let ocamlfind_query pkg =
+  let cmd = Printf.sprintf "ocamlfind query %s" (Filename.quote pkg) in
+  My_unix.run_and_open cmd (fun ic ->
+    Log.dprintf 5 "Getting Ocaml directory from command %s" cmd;
+    input_line ic)
+
 let aurochs = ref (S[A"aurochs";A"-quiet";A"-target";A"ml"]);;
 let system_lib_dir = "/usr/lib";;
 
@@ -13,22 +19,22 @@ dispatch
   | After_rules ->
       begin
         List.iter
-          begin fun dir ->
-            flag ["ocaml"; "link"]    (S[A"-I"; A("/usr/local/lib/ocaml/site-lib/"^dir)]);
-            flag ["ocaml"; "compile"] (S[A"-I"; A("/usr/local/lib/ocaml/site-lib/"^dir)]);
+          begin fun pkg ->
+            let dir = ocamlfind_query pkg in
+            ocaml_lib ~extern:true ~dir:dir pkg;
+            flag ["compile"; "ocaml"; "use_"^pkg] (S[A"-I";A dir])
           end
           [
            "pcre";
            "equeue";
            "netsys";
            "netstring";
-           "neturl";
+           (*"neturl";*)
            "netclient";
+           "nethttpd";
             ];
 
         Options.ocamlopt := S[A"ocamlopt";A"-verbose"];
-
-        List.iter (ocaml_lib ~extern:true) ["pcre"; "equeue"; "netsys"; "netstring"; "netclient"; "neturl"];
 
         flag ["link"; "ocaml"; "byte"; "use_libaurochs"]
              (S[A"-dllib";A("-laurochs"); A"-cclib";A("-laurochs")]);

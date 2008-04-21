@@ -78,6 +78,7 @@ let with_doc ~cx ~url f =
       pf "  Slowing down by %fs\n%!" wt;
       Time.wait (cx.cx_previous +. !Opt.min_delay)
     end;
+  cx.cx_previous <- Time.now ();
   let doc = Www.obtain_document cx.cx_pipe (Www.Get url) in
   cx.cx_previous <- Time.now ();
   f doc
@@ -115,7 +116,7 @@ let process_entry cx en =
   match en.en_id with
   | None -> pf "Story with no ID!\n%!"
   | Some id ->
-      if not (Hashtbl.mem cx.cx_stories id) then
+      if Hashtbl.length cx.cx_stories < !Opt.max_stories && not (Hashtbl.mem cx.cx_stories id) then
         let st =
           try
             load_story id
@@ -140,6 +141,7 @@ let process_entry cx en =
             st
         in
         Hashtbl.add cx.cx_stories id st;
+        Queue.add st cx.cx_queue
       else
         ()
 
@@ -148,6 +150,13 @@ let scan cx =
   let entries = scan_front cx in
   Array.iteri (fun i en -> process_entry cx en) entries;
   cx.cx_last_scan <- Time.now ()
+
+let protect f =
+  try
+    f ()
+  with
+  | x ->
+      Printf.printf "Exception %s\n%!" (Printexc.to_string x)
 
 let controller url =
   let cx =
@@ -166,7 +175,7 @@ let controller url =
     let t = Time.now () in
     if Hashtbl.length cx.cx_stories < !Opt.max_stories && t -. cx.cx_last_scan > !Opt.scan_interval then
       (* Do a scan *)
-      scan cx
+      protect (fun () -> scan cx)
     else
       (* Do a story *)
       if Queue.is_empty cx.cx_queue then
@@ -174,7 +183,7 @@ let controller url =
       else
         begin
           let st = Queue.take cx.cx_queue in
-          details cx st;
+          protect (fun () -> details cx st);
           Queue.add st cx.cx_queue (* Add the story to the end of the queue *)
         end
   done

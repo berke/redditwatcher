@@ -37,11 +37,13 @@ module Do =
   end
 
 let spec = [
+  "-dir",           Arg.Set_string Opt.story_dir, "<dir> Directory for saving stories.";
   "-max-stories",   Arg.Set_int Opt.max_stories, "<n> Set maximum number of new stories to follow.";
   "-scan",          Arg.String(fun url -> Do.scan url), "<url> Scan entry.";
   "-dump",          Arg.String(fun url -> Do.dump url), "<url> Dump URL content to stdout.";
   "-show",          Arg.String(fun fn -> Do.show fn),   "<fn> Show a given story";
   "-debug",         Arg.Set Opt.debug, " Enable debugging.";
+  "-id",            Arg.String(fun u -> Opt.extra_ids := u :: !Opt.extra_ids), "<id> Add extra story to track";
   "-min-delay",     Arg.Set_float Opt.min_delay, "<delay> Minimum delay between HTTP requests in seconds.";
   "-scan-interval", Arg.Set_float Opt.scan_interval, "<delay> Delay between scans of the new stories page."
 ]

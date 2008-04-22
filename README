@@ -1,0 +1,45 @@
+Redditwatcher 0.1
+=================
+By Berke Durak <berke@ouvaton.org>
+
+Description
+===========
+Repeatedly follows stories appearing on the Reddit "NEW" page.
+Periodically samples their scores and saves them to marshalled files,
+which can later be dumped in gnuplot/R-compatible format for statistical
+analysis.  Typically used to (a) see how your submission's score goes
+over time or (b) to attempt to prove that a secret cabal of redditors
+systematically downmods everyone else's stories.
+
+License
+=======
+GPL.  See the LICENSE file
+
+Code status
+===========
+Works but is relatively dirty, unelegant, hackish code (translation:
+I can do better).
+
+Requirements
+============
+* Ocaml >= 3.10
+* Ocamlfind
+* Equeue
+* Pcre
+* Netsys
+* Netstring
+* Nethttpd
+
+Compilation
+===========
+make
+
+Usage
+=====
+> make
+> mkdir stories
+> ./scavenge.native -dir stories -scan http://reddit.com/r/programming
+> ./scavenge.native -show stories/story-foobar >toto.dat
+> gnuplot
+>> plot "toto.dat" using 1:3 with lines
+>> etc.
